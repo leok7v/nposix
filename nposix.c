@@ -132,18 +132,6 @@ static random_48bit_seed_t random_48bit(uint64_t *seed) {
         .s1 = (uint16_t)(*seed >> 16),
         .s2 = (uint16_t)(*seed >> 32),
     };
-    // no big endian host handy around (too lazy to unpack PowerPC Mac)
-    static int count; // check unpack sanity
-    if (count == 0) {
-        count++;
-        traceln("0x%016llX", *seed);
-        traceln("0x%04X", x.s0);
-        traceln("0x%04X", x.s1);
-        traceln("0x%04X", x.s2);
-        swear(x.s0 == 0x330E);
-        swear(x.s1 == 0xABCD);
-        swear(x.s2 == 0x1234);
-    }
     uint16_t m0 = (uint16_t)(random_generator.mult >> 00);
     uint16_t m1 = (uint16_t)(random_generator.mult >> 16);
     uint16_t m2 = (uint16_t)(random_generator.mult >> 32);
