@@ -2,6 +2,7 @@
 /* Copyright (c) Dmitry "Leo" Kuznetsov 2021 see LICENSE for details */
 #include <ctype.h>
 #include <errno.h>
+#include <inttypes.h>
 #include <math.h>
 #include <pthread.h>
 #include <stdarg.h>
@@ -24,18 +25,18 @@
         Extra call penalty also may affect compiler ability to inline.
         If caller needs to do something like memcpy(~,~,small) fast
         instead of calling mem.copy() it still can.
-    need for errors:
+    fatal errors:
         Fail fast is convinient especially when code is organized as
         setup/tear down once (e.g. all threads are created on startup,
         all sync primitives initialized at startup).
         But there could be situations when caller needs to really
         call pthread_create() and check for too many threads created
         and fall back to some Plan B code instead.
-        It still can.
+        It still can do it.
      
  Advantages:
     readability:
-        less control structures easier to follow logic
+        Less control structures make logic easier to follow.
     ability to check for absent functionality:
         e.g.
             if (mutext.try_lock == null) {
@@ -43,13 +44,17 @@
                 // may switch to Plan B and do things differently
             }
     namespacing:
-        some of posix name choices are amazingly non-specific:
-        e.g. marvel at initstate() and setstate() and many others
-    ability to override:
+        Some of posix name choices are amazingly non-specific:
+        e.g. marvel at initstate() and setstate() and many others.
+    interception:
         e.g.
             heap_alloc = heap.alloc;
             heap.alloc = tracing_alloc; // will trace and call heap_alloc
-        may allow to trace all heap memory allocation calls
+        may allow to trace all heap memory allocation calls.
+        Another posibility is to override heap.alloc to raise memory_low
+        flag, notify subscribers and switch to preallocated reserved pool
+        to let subscribers complete persistent data serialization on memory
+        low event.
 */
 
 
@@ -128,14 +133,27 @@
 
 begin_c
 
-// TODO: explain why signed
+/* Unsigned types are very error prone.
+   It is rare (but still possible) that application code
+   works with > 2GB in memory objects on 32-bit systems and a whole.
+   On 64-bit systems in-mempry object size limitation of 2^63 versus
+   2^64 seems immaterial at present day and age.
+   Thus to simplify usage of n.posix API int_t type is used
+   for object sizes and offsets which is compatible with pointer
+   arithmetics. It is possible that sizeof(int_t) > sizeof(int)
+   on some systems and thus arrays cannot be indexed by it
+   without losing precision. Exercise caution.
+*/
 
 typedef intptr_t int_t;
 
 typedef struct {
     void* (*copy)(void* d, const void* s, int_t bytes);
     void* (*move)(void* d, const void* s, int_t bytes);
-    int (*compare)(const void* left, const void* right, int_t bytes);
+    void* (*fill)(void* a, uint8_t byte, int_t bytes); // memset
+    void* (*zero)(void* a, int_t bytes); // memset(,0,)
+    int   (*compare)(const void* left, const void* right, int_t bytes);
+    bool  (*equal)(const void* left, const void* right, int_t bytes);
 } mem_if; // "_if" stands for "interface"
 
 extern mem_if mem;
@@ -143,7 +161,9 @@ extern mem_if mem;
 typedef struct {
     int_t (*length)(const char* s);
     bool (*equal)(const char* s1, const char* s2, int_t bytes);
-    double (*to_double)(const char* s, int bytes); // returns NaN on error
+    /* to_double() can be used as to_int32() */
+    double (*to_double)(const char* s, int bytes, int* error); // NaN on error
+    void (*to_int64)(int64_t* d, const char* s, int bytes, int* error);
     bool (*starts_with)(const char* s, const char* prefix);
     bool (*contains)(const char* s, const char* substring);
 } str_if;
@@ -151,35 +171,40 @@ typedef struct {
 extern str_if str;
 
 typedef struct {
-    int32_t max; // 2^31 - 1
-    double (*as_int32)(void); // [0..max]
-    double (*as_double)(void);
-    void (*seed)(unsigned int);
-    char* (*init_state)(unsigned seed, char *state, size_t n);
-    char* (*set_state)(const char *state);
+    const uint64_t initial_seed;
+    uint64_t seed; // only little endian 48 bits used
+    uint64_t mult;
+    uint16_t add;
+    const int32_t minimum; // -2^31
+    const int32_t maximum; // 2^31 - 1
+    // next_xxxx() functions operate on internal global above seed
+    int32_t (*next_int32)(void);  // [minimum..maximum) exclusive
+    int32_t (*next_uint32)(void); // [0..maximum) exclusive
+    double  (*next_double)(void);  // [0.0 .. 1.0) exclusive
+    // next_seeded_xxxx() functions operate on provided seed
+    int32_t (*next_seeded_int32)(uint64_t *seed);
+    int32_t (*next_seeded_uint32)(uint64_t *seed);
+    double  (*next_seeded_double)(uint64_t *seed);
 } random_generator_if;
 
 extern random_generator_if random_generator;
 
 typedef struct {
-    void* (*alloc)(intptr_t bytes);
-    void* (*realloc)(void* data, intptr_t bytes);
+    void* (*alloc)(int_t bytes); // traditional naming
+    void* (*realloc)(void* data, int_t bytes);
     void* (*free)(void* data);
+    // allocate() is convinience for alloc() + memset(p, 0, bytes)
+    void* (*allocate)(int_t bytes);
 } heap_if;
 
 extern heap_if heap;
-
-
-#ifndef NSEC_PER_SEC // suppose to be in time.h but it actually depends
-#define NSEC_PER_SEC 1000000000L
-#endif
 
 typedef struct {
     const int64_t nsec_per_sec; // nanoseconds  1,000,000,000
     const int64_t usec_per_sec; // microseconds 1,000,000
     const int64_t msec_per_sec; // milliseconds 1,000
-    double (*time_since_epoch)(void); // returns number of seconds since 01/01/1970
-    double (*time)(void); // returns number of seconds since unspecified unspecified starting point
+    double (*time_since_epoch)(void); // returns number of seconds since 1970
+    double (*time)(void); // seconds since unspecified starting point
 } process_clock_if;
 
 extern process_clock_if process_clock;
@@ -201,7 +226,7 @@ typedef struct {
     void (*init)(event_t* e);
     void (*signal)(event_t* e);
     void (*wait)(event_t* e, mutex_t* m);
-    int (*timed_wait)(event_t* e, mutex_t* m, double seconds); // 0 or ETIMEDOUT
+    int  (*timed_wait)(event_t* e, mutex_t* m, double seconds); // ETIMEDOUT
     void (*dispose)(event_t* e);
 } event_if;
 
@@ -220,12 +245,9 @@ extern threads_if threads;
 
 typedef struct {
     int (*file_readonly)(const char* filename, void* *data, int_t *bytes);
-    int (*file_readwrite)(const char* filename, void* *data, int_t *bytes);
+    int (*file_readwrite)(const char* filename, int_t offset, int_t size,
+                          void* *data, int_t *bytes);
     int (*file_unmap)(void* data, int_t bytes);
-    void* (*allocated)(int_t bytes); // modern sbrk
-    void* (*free)(void* data, int_t bytes); // modern setbrk
-    void* (*sbrk)(int_t bytes);
-    void* (*setbrk)(void* address);
 } memmap_if;
 
 extern memmap_if memmap;
