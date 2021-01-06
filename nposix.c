@@ -546,7 +546,12 @@ static void nposix_test_random_generator() {
 }
 
 static void nposix_test_process_clock() {
-
+    for (int i = 0; i < 1000; i++) {
+        double now = process_clock.time();
+        double delay = random_generator.next_double() / process_clock.usec_per_sec;
+        threads.sleep(delay);
+        swear(process_clock.time() >= now + delay);
+    }
 }
 
 static void nposix_test_threads() {
