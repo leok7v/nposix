@@ -120,49 +120,62 @@ str_if str = {
     .contains = str_contains
 };
 
-static uint16_t* random_48bit(uint64_t *seed) {
-#if 'DCBA' == 0x41424344
-    enum { ix0 = 3, ix1 = 2, ix2 = 1 };
-#elif 'DCBA' == 0x44434241
-    enum { ix0 = 0, ix1 = 1, ix2 = 2 };
-#else // wierd byte order (neither little not big endian)
-    enum { ix0 = -1, ix1 = -1, ix2 = -1 };
-    uint32_t abcd = ABCD;
-    assertion(abcd == 0x44434241 || abcd == 0x41424344,
-              "'%*.*s' = 0x%08X != neither 0x44434241 nor 0x41424344\n",
-              4, 4, &abcd, abcd);
-#endif
-    uint16_t* xseed = (uint16_t*)seed; /* xseed[3] */
-    uint16_t* mult = (uint16_t*)&random_generator.mult;
+typedef struct random_48bit_seed_s {
+    uint16_t s0;
+    uint16_t s1;
+    uint16_t s2;
+} random_48bit_seed_t;
+
+static random_48bit_seed_t random_48bit(uint64_t *seed) {
+    random_48bit_seed_t x = {
+        .s0 = (uint16_t)(*seed >> 00),
+        .s1 = (uint16_t)(*seed >> 16),
+        .s2 = (uint16_t)(*seed >> 32),
+    };
+    // no big endian host handy around (too lazy to unpack PowerPC Mac)
+    static int count; // check unpack sanity
+    if (count == 0) {
+        count++;
+        traceln("0x%016llX", *seed);
+        traceln("0x%04X", x.s0);
+        traceln("0x%04X", x.s1);
+        traceln("0x%04X", x.s2);
+        swear(x.s0 == 0x330E);
+        swear(x.s1 == 0xABCD);
+        swear(x.s2 == 0x1234);
+    }
+    uint16_t m0 = (uint16_t)(random_generator.mult >> 00);
+    uint16_t m1 = (uint16_t)(random_generator.mult >> 16);
+    uint16_t m2 = (uint16_t)(random_generator.mult >> 32);
     const uint32_t add = (uint32_t)random_generator.add;
-    uint32_t accu = (uint32_t)mult[ix0] * (uint32_t)xseed[ix0] + add;
+    uint32_t accu = (uint32_t)m0 * (uint32_t)x.s0 + add;
     uint16_t t0 = (uint16_t)accu; /* lower 16 bits */
     accu >>= sizeof(uint16_t) * 8;
-    accu += (uint32_t)mult[ix0] * (uint32_t)xseed[ix1] +
-        (uint32_t)mult[ix1] * (uint32_t)xseed[ix0];
+    accu += (uint32_t)m0 * x.s1 + (uint32_t)m1 * (uint32_t)x.s0;
     uint16_t t1 = (uint16_t)accu; /* middle 16 bits */
     accu >>= sizeof(uint16_t) * 8;
-    accu += mult[ix0] * xseed[ix2] + mult[ix1] * xseed[ix1] + mult[ix2] * xseed[ix0];
-    xseed[0] = t0;
-    xseed[1] = t1;
-    xseed[2] = (uint16_t)accu;
-    return xseed;
+    accu += m0 * x.s2 + m1 * x.s1 + m2 * x.s0;
+    x.s0 = t0;
+    x.s1 = t1;
+    x.s2 = (uint16_t)accu;
+    *seed = (uint64_t)t0 | (((uint32_t)t1) << 16) | (((uint64_t)accu) << 32);
+    return x;
 }
 
 static int32_t random_next_seeded_uint32(uint64_t *seed) { // aka nrand48()
-    uint16_t* xseed = random_48bit(seed);
-    return ((int32_t)xseed[2] << 15) + ((int32_t)xseed[1] >> 1);
+    random_48bit_seed_t x = random_48bit(seed);
+    return ((int32_t)x.s2 << 15) + ((int32_t)x.s1 >> 1);
 }
 
 static int32_t random_next_seeded_int32(uint64_t *seed) { // aka jrand48()
-    uint16_t* xseed = random_48bit(seed);
-    return ((int32_t)xseed[2] << 16) + (int32_t)xseed[1];
+    random_48bit_seed_t x = random_48bit(seed);
+    return ((int32_t)x.s2 << 16) + (int32_t)x.s1;
 }
 
 static double random_next_seeded_double(uint64_t *seed) { // aka erand48()
-    uint16_t* xseed = random_48bit(seed);
-    return ldexp((double)xseed[0], -48) + ldexp((double)xseed[1], -32) +
-           ldexp((double)xseed[2], -16);
+    random_48bit_seed_t x = random_48bit(seed);
+    return ldexp((double)x.s0, -48) + ldexp((double)x.s1, -32) +
+           ldexp((double)x.s2, -16);
 }
 
 static int32_t random_next_uint32(void) {
@@ -178,22 +191,9 @@ static double random_next_double(void) { // aka drand48()
 }
 
 random_generator_if random_generator = {
-#if 'DCBA' == 0x44434241 // this is not reliable for all compilers
     .initial_seed = 0x1234ABCD330E,
     .seed = 0x1234ABCD330E, // { 330E ABCD 1234 }
     .mult = 0x0005DEECE66D, // { E66D DEEC 0005 }
-#elif 'DCBA' == 0x41424344
-    .initial_seed = 0x330ECDAB341200,
-    .seed = 0x330ECDAB341200, // { 330E ABCD 1234 }
-    .mult = 0x6DE6ECDE0500,   // { E66D DEEC 0005 }
-#else // wierd byte order (neither little not big endian)
-    #error "wierd byte order (neither little not big endian)"
-    /* this may be helpful to understand what the heck is going on
-    assertion(abcd == 0x44434241 || abcd == 0x41424344,
-              "'%*.*s' = 0x%08X != neither 0x44434241 nor 0x41424344\n",
-              4, 4, &abcd, abcd);
-    */
-#endif
     .add  = 0x000B,
     .minimum = (int)(-(1LL << 31)),
     .maximum = (int)((1ULL << 31) - 1),
