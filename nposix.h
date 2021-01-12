@@ -162,14 +162,14 @@ typedef struct {
     void* (*fill)(void* a, uint8_t byte, int_t bytes); // memset
     void* (*zero)(void* a, int_t bytes); // memset(,0,)
     int   (*compare)(const void* left, const void* right, int_t bytes);
-    bool  (*equal)(const void* left, const void* right, int_t bytes);
+    bool  (*equals)(const void* left, const void* right, int_t bytes);
 } mem_if; // "_if" stands for "interface"
 
 extern mem_if mem;
 
 typedef struct {
     int_t (*length)(const char* s);
-    bool (*equal)(const char* s1, const char* s2, int_t bytes);
+    bool (*equals)(const char* s1, const char* s2, int_t bytes);
     /* to_double() can be used as to_int32() */
     double (*to_double)(const char* s, int bytes, errno_t *error); // may be NaN
     void (*to_int64)(int64_t* d, const char* s, int bytes, errno_t *error);

@@ -34,7 +34,7 @@ static int mem_compare(const void* left, const void* right, int_t bytes) {
 /* If you never spent hours starting at missing "== 0" (which was not there
    to stare at) after memcmp() you might have been living in paradise: */
 
-static bool mem_equal(const void* a, const void* b, int_t bytes) {
+static bool mem_equals(const void* a, const void* b, int_t bytes) {
     return memcmp(a, b, bytes) == 0;
 }
 
@@ -44,12 +44,12 @@ mem_if mem = {
     .fill = mem_fill,
     .zero = mem_zero,
     .compare = mem_compare,
-    .equal = mem_equal
+    .equals = mem_equals
 };
 
 static int_t str_length(const char* s) { return strlen(s); }
 
-static bool str_equal(const char* s1, const char* s2, int_t bytes) {
+static bool str_equals(const char* s1, const char* s2, int_t bytes) {
     return s1 == s2 || bytes > 0 ?
            strncmp(s1, s2, bytes) == 0 : strcmp(s1, s2) == 0;
 }
@@ -113,7 +113,7 @@ static bool str_contains(const char* s1, const char* s2) {
 
 str_if str = {
     .length = str_length,
-    .equal = str_equal,
+    .equals = str_equals,
     .to_double = str_to_double,
     .to_int64 = str_to_int64,
     .starts_with = str_starts_with,
@@ -428,7 +428,7 @@ static void nposix_test_mem() {
     mem.zero(a, n);
     for (int i = 0; i < n; i++) { swear(a[i] == 0); }
     mem.copy(a, c, n);
-    swear(mem.equal(a, c, n));
+    swear(mem.equals(a, c, n));
     swear(mem.compare(a, c, n) == 0);
     for (int i = 0; i < n; i++) { swear(a[i] == c[i]); }
     a[8] = 0xFF;
@@ -453,16 +453,16 @@ static void nposix_test_str() {
     char s[4];
     assertion(countof(s) == 4, "is countof() broken?");
     strcpy(s, "abc");
-    assertion(str.equal("abc", "abc", 0), "compare to itself");
-    assertion(str.equal(s,     "abc", 0), "zero terminated not equal");
-    assertion(str.equal("abc", s,     0), "zero terminated not equal");
+    assertion(str.equals("abc", "abc", 0), "compare to itself");
+    assertion(str.equals(s,     "abc", 0), "zero terminated not equal");
+    assertion(str.equals("abc", s,     0), "zero terminated not equal");
     s[3] = 'z'; // str[] is not zero terminated anymore
-    assertion(str.equal(s,     "abc",  3), "non-zero terminated not equal");
-    assertion(str.equal("abc", s,      3), "non-zero terminated not equal");
-    assertion(str.equal(s,     "abcd", 3), "non-zero terminated not equal");
-    assertion(str.equal("abcd", s,     3), "non-zero terminated not equal");
-    assertion(!str.equal("abc", "xyz", 0), "should not be equal");
-    assertion(!str.equal("abc", "xyz", 3), "compare only 3 bytes");
+    assertion(str.equals(s,     "abc",  3), "non-zero terminated not equal");
+    assertion(str.equals("abc", s,      3), "non-zero terminated not equal");
+    assertion(str.equals(s,     "abcd", 3), "non-zero terminated not equal");
+    assertion(str.equals("abcd", s,     3), "non-zero terminated not equal");
+    assertion(!str.equals("abc", "xyz", 0), "should not be equal");
+    assertion(!str.equals("abc", "xyz", 3), "compare only 3 bytes");
     // str_to_double
     char numeral[16]= {};
     // 9 bytes:      012345678
@@ -592,7 +592,7 @@ static void nposix_test_memmap() {
             char content[4];
             int k = (int)read(fd, content, 3);
             assertion(k == 3, "read(%d \"%s\", , 3)=%d", fd, filename, k);
-            assertion(mem.equal(content, "xyz", 3), "expected \"xyz\"");
+            assertion(mem.equals(content, "xyz", 3), "expected \"xyz\"");
             close(fd);
         }
         unlink(filename);
