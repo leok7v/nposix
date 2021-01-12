@@ -1,4 +1,7 @@
 # n.posix
+
+pronunciation: "neo-posix" (because I didn't decide yet what "n." stands for...)
+
 "not quite" a posix supplanter but may come close enough
 
 (or whatever you can think "n" stands for... see: http://stallman.org/articles/posix.html)
@@ -241,6 +244,25 @@ typedef struct {
     formatter_if formatter;
 } formatted_stream_if;
 ```
+
+### macros
+
+* `println()` and `println_err()` because Swift and Java have it right
+  (how many `printf()`s do **not** have `\n` at the end of format specification?)
+* `countof(array)` should have been the part of the language because `sizeof()` is 
+  not enough.
+* `null` because `NULL` stands out too much (as `TRUE`, `FALSE`, `YES` and `NO` used to be),
+  in many platforms `NULL` `#define`d as `0` instead of `(void*)0` as it should be, 
+  and `null_ptr` is just late night C++ ecosystem band aid slapped on the eternally confused 
+  coders who misread NUL-terminated strings as NULL-terminated strings...
+* `traceln` when one runs into log pollution situation in real life project one will accept code
+  `__location__` of each trace with a gratitude. It is not a replacement for full blown
+  `log.info()`, `log.warn()`, `log.err()` subsystem but those are not part of `posix`
+  stderr/stdout separation and can be left for application logic.
+* `assertion()` is introduced for the lack of additional format specification and arguments in
+  a weak `assert()` from `#include <assert.h>` that is also known to be turned off in
+  release builds (like a sailor that only wears life-jacket ashore).
+* `swear(true)` is tribute to a beautiful idea of https://github.com/munificent/vigil   
 
 ### work in progress
 

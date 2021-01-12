@@ -87,6 +87,7 @@ typedef int errno_t;
 
 #define __location__ __file__, __LINE__, __FUNCTION__
 
+#define println(format, ...) printf(format "\n", ##__VA_ARGS__)
 #define print_err(...) fprintf(stderr, __VA_ARGS__)
 #define println_err(format, ...) fprintf(stderr, format "\n", ##__VA_ARGS__)
 
