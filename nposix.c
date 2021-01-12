@@ -1,6 +1,13 @@
 /* Copyright (c) Dmitry "Leo" Kuznetsov 2020 see LICENSE for details */
 
 #include "nposix.h"
+#include <ctype.h>
+#include <inttypes.h>
+#include <math.h>
+#include <pthread.h>
+#include <stdlib.h>
+#include <time.h>
+#include <unistd.h>
 #include <fcntl.h>
 #include <stdatomic.h>
 #include <sys/mman.h>

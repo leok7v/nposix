@@ -1,18 +1,12 @@
 #pragma once
 /* Copyright (c) Dmitry "Leo" Kuznetsov 2021 see LICENSE for details */
-#include <ctype.h>
+
 #include <errno.h>
-#include <inttypes.h>
-#include <math.h>
-#include <pthread.h>
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
-#include <time.h>
-#include <unistd.h>
 
 /* n.posix
  
