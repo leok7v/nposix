@@ -14,7 +14,7 @@
 #include <time.h>
 #include <unistd.h>
 
-/* nanoposix
+/* n.posix
  
  This is namespace separated version of some (not all) posix functions.
  Most of the functions are fail-fast with stderr output "FATAL: ..." if
@@ -26,7 +26,7 @@
         If caller needs to do something like memcpy(~,~,small) fast
         instead of calling mem.copy() it still can.
     fatal errors:
-        Fail fast is convinient especially when code is organized as
+        Fail fast is convenient especially when code is organized as
         setup/tear down once (e.g. all threads are created on startup,
         all sync primitives initialized at startup).
         But there could be situations when caller needs to really
@@ -39,11 +39,11 @@
         Less control structures make logic easier to follow.
     ability to check for absent functionality:
         e.g.
-            if (mutext.try_lock == null) {
+            if (mutex.try_lock == null) {
                 // this OS does not implement try_lock()
                 // may switch to Plan B and do things differently
             }
-    namespacing:
+    names-pacing:
         Some of posix name choices are amazingly non-specific:
         e.g. marvel at initstate() and setstate() and many others.
     interception:
@@ -51,14 +51,14 @@
             heap_alloc = heap.alloc;
             heap.alloc = tracing_alloc; // will trace and call heap_alloc
         may allow to trace all heap memory allocation calls.
-        Another posibility is to override heap.alloc to raise memory_low
+        Another possibility is to override heap.alloc to raise memory_low
         flag, notify subscribers and switch to preallocated reserved pool
         to let subscribers complete persistent data serialization on memory
         low event.
 */
 
 
-/* small run time convinience over posix */
+/* small run time convenience over posix */
 
 #ifdef __cplusplus
 #define begin_c extern "C" {
@@ -68,9 +68,17 @@
 #define end_c
 #endif
 
-#define countof(array) ((int)(sizeof(array) / sizeof(array[0]))) // carefully applicable to arrays only
 
-#define null NULL // true, false are lowercase in stdbool, right?
+#ifndef countof // carefully applicable to arrays only
+#define countof(array) ((int)(sizeof(array) / sizeof(array[0])))
+#endif
+
+#define null NULL // true, false are lowercase in stdbool, right? null_ptr ugly
+
+#ifndef _ERRNO_T
+#define _ERRNO_T
+typedef int errno_t;
+#endif
 
 #define once while (false) // for "do { } once" bracket balance
 
@@ -120,7 +128,7 @@
     #define traceln(format, ...) do { } once
 #endif
 
-/* when absolutely cannot continue execution: */
+// when absolutely cannot continue execution:
 #define fatal(format, ...) do { \
     println_err("FATAL: %s:%d %s " format, __location__, ##__VA_ARGS__); \
     abort(); \
@@ -130,6 +138,7 @@
 #define if_error_fatal(expression) do { \
     if ((expression) != 0) { fatal("%s", #expression); } \
 } once
+
 
 begin_c
 
@@ -162,8 +171,8 @@ typedef struct {
     int_t (*length)(const char* s);
     bool (*equal)(const char* s1, const char* s2, int_t bytes);
     /* to_double() can be used as to_int32() */
-    double (*to_double)(const char* s, int bytes, int* error); // NaN on error
-    void (*to_int64)(int64_t* d, const char* s, int bytes, int* error);
+    double (*to_double)(const char* s, int bytes, errno_t *error); // may be NaN
+    void (*to_int64)(int64_t* d, const char* s, int bytes, errno_t *error);
     bool (*starts_with)(const char* s, const char* prefix);
     bool (*contains)(const char* s, const char* substring);
 } str_if;
@@ -193,7 +202,7 @@ typedef struct {
     void* (*alloc)(int_t bytes); // traditional naming
     void* (*realloc)(void* data, int_t bytes);
     void* (*free)(void* data);
-    // allocate() is convinience for alloc() + memset(p, 0, bytes)
+    // allocate() is convenience for alloc() + memset(p, 0, bytes)
     void* (*allocate)(int_t bytes);
 } heap_if;
 
@@ -215,7 +224,7 @@ typedef pthread_mutex_t mutex_t;
 typedef struct {
     void (*init)(mutex_t* m);
     void (*lock)(mutex_t* m);
-    int  (*try_lock)(mutex_t* m); // 0 or EBUSY only
+    errno_t (*try_lock)(mutex_t* m); // 0 or EBUSY only
     void (*unlock)(mutex_t* m);
     void (*dispose)(mutex_t* m);
 } mutex_if;
@@ -226,7 +235,7 @@ typedef struct {
     void (*init)(event_t* e);
     void (*signal)(event_t* e);
     void (*wait)(event_t* e, mutex_t* m);
-    int  (*timed_wait)(event_t* e, mutex_t* m, double seconds); // ETIMEDOUT
+    errno_t (*timed_wait)(event_t* e, mutex_t* m, double seconds); // ETIMEDOUT
     void (*dispose)(event_t* e);
 } event_if;
 
@@ -244,10 +253,10 @@ typedef struct {
 extern threads_if threads;
 
 typedef struct {
-    int (*file_readonly)(const char* filename, void* *data, int_t *bytes);
-    int (*file_readwrite)(const char* filename, int_t offset, int_t size,
+    errno_t (*file_readonly)(const char* filename, void* *data, int_t *bytes);
+    errno_t (*file_readwrite)(const char* filename, int_t offset, int_t size,
                           void* *data, int_t *bytes);
-    int (*file_unmap)(void* data, int_t bytes);
+    errno_t (*file_unmap)(void* data, int_t bytes);
 } memmap_if;
 
 extern memmap_if memmap;

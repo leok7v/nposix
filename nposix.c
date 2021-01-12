@@ -54,7 +54,7 @@ static bool str_equal(const char* s1, const char* s2, int_t bytes) {
            strncmp(s1, s2, bytes) == 0 : strcmp(s1, s2) == 0;
 }
 
-static double str_to_double(const char* s, int bytes, int* error) {
+static double str_to_double(const char* s, int bytes, errno_t *error) {
     assertion(0 <= bytes && bytes < 64, "invalid bytes=%d" , bytes);
     if (bytes > 64) {
         *error = E2BIG;
@@ -80,7 +80,7 @@ static double str_to_double(const char* s, int bytes, int* error) {
     }
 }
 
-static void str_to_int64(int64_t* d, const char* s, int bytes, int* error) {
+static void str_to_int64(int64_t* d, const char* s, int bytes, errno_t *error) {
     *error = 0;
     assertion(0 <= bytes && bytes < 64, "invalid bytes=%d" , bytes);
     if (bytes > 64) {
@@ -242,7 +242,7 @@ static void mutex_lock(mutex_t* m) {
     if_error_fatal(pthread_mutex_lock(m));
 }
 
-static int mutex_try_lock(mutex_t* m) {
+static errno_t mutex_try_lock(mutex_t* m) {
     int mutex_trylock = pthread_mutex_trylock(m);
     if (mutex_trylock != EBUSY) {
         if_error_fatal(mutex_trylock);
@@ -278,7 +278,7 @@ static void event_wait(event_t* e, mutex_t* m) {
     if_error_fatal(pthread_cond_wait(e, m));
 }
 
-static int event_timed_wait(event_t* e, mutex_t* m, double seconds) {
+static errno_t event_timed_wait(event_t* e, mutex_t* m, double seconds) {
     // Nothing is ever easy with posix.
     // pthread_cond_timedwait() uses *unspecified* abstime
     // which is a guess work for each OS
