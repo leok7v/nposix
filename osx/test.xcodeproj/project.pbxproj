@@ -24,6 +24,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		B36E0AA625AE09FA00EA4D35 /* README.md */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = net.daringfireball.markdown; name = README.md; path = ../README.md; sourceTree = "<group>"; };
 		B3956296258FF1C8008DFB81 /* test */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = test; sourceTree = BUILT_PRODUCTS_DIR; };
 		B3FE5C2625A394F0006ECB4F /* main.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = main.c; sourceTree = "<group>"; };
 		B3FE5C2A25A3959D006ECB4F /* nposix.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = nposix.c; path = ../nposix.c; sourceTree = "<group>"; };
@@ -44,6 +45,7 @@
 		B395628D258FF1C8008DFB81 = {
 			isa = PBXGroup;
 			children = (
+				B36E0AA625AE09FA00EA4D35 /* README.md */,
 				B3FE5C2A25A3959D006ECB4F /* nposix.c */,
 				B3FE5C2B25A3959D006ECB4F /* nposix.h */,
 				B3FE5C2625A394F0006ECB4F /* main.c */,
