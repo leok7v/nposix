@@ -6,6 +6,6 @@ int main(int argc, const char* argv[]) {
     println();
 //  assertion(false, "This is expected to fail and terminate execution");
 //  swear("foo" == "bar"); // should not ever be here
-    traceln("Goodbye %", "Universe");
+    traceln("Goodbye %s", "Universe");
     return 0;
 }
