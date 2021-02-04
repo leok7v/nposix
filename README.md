@@ -177,7 +177,7 @@ POSIX has two major mechanisms of returning errors:
 * result (positive value != 0 is treater as error and 0 is OK)
 
 The `errno` mechanism (even with the availability of thread local variables) is a horrible way
-of returning error status to upper level of callers. If will be is avoided and wrapped where
+of returning error status to upper level of callers. If possible it will be avoided and wrapped where
 necessary in `n.posix` code.
 
 Using function result for error status is acceptable for simple functions but 
