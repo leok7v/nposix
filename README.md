@@ -34,7 +34,7 @@ implementation of n.posix) the sample set of platform may include:
 * SoC RT/OSes
 * ...
 
-There is no shortage of ways to achieve this goal. Just to name the few and to give you 
+There is no shortage of ways to achieve this goal. Just to name a few and to give you 
 some examples (and foot for thoughts):
 * standards ANSI ISO/IEC 9899:1999 and alike for both C and C++...
 * new programming languages (C++, Java, ObjC, Swift, Go, Rust)
