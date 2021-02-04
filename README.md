@@ -18,7 +18,7 @@ https://en.wikipedia.org/wiki/POSIX
 
 ## Why
 
-There is a need to language, mean and lean runtime (expressed as in the language 
+There is a need for a language, mean and lean runtime (expressed as in the language 
 with the ability to link it to application domain code) that allow software engineers 
 to express execution on a wide variety of platforms. The goal was used to be called
 "portability" and shy into "compatibility between operating systems".
