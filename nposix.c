@@ -576,7 +576,7 @@ static void nposix_test_memmap() {
     assertion(fd >= 0, "failed to create temporary file \"%s\"", filename);
     if (fd >= 0) {
         int k = (int)write(fd, "abc", 3);
-        assertion(k == 3, "fwrite(\"abc\", 3, 1, f) failed %d bytes", k);
+        assertion(k == 3, "write(\"abc\", 3, 1, f) failed %d bytes", k);
         close(fd);
         int_t bytes = 0;
         void* data = null;
